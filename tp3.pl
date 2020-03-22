@@ -121,27 +121,27 @@ congres(A,B,C,D,E,F,G,H,I,J,K):-
 	Salles =[C1,C2,C3,C4],
 	Salles ins 0..3,
 
+    all_distinct([A,J]),
+    all_distinct([J,I]),
+    all_distinct([I,E]),
+    all_distinct([C,F]),
+    all_distinct([F,G]),
+    all_distinct([D,H]),
+    all_distinct([B,D]),
+    all_distinct([K,E]),
+    all_distinct([B,I,H,G]),
+    all_distinct([A,G,E]),
+    all_distinct([B,H,K]),
+    all_distinct([A,B,C,H]),
+    all_distinct([D,F,J]),
+
+	E#<J,
+	D#<K, F#<K,	
+
 	count(Vars,1,C1), 
 	count(Vars,2,C2), 
 	count(Vars,3,C3), 
 	count(Vars,4,C4),
-
-	A#\=J,
-	J#\=I,
-	I#\=E,
-	C#\=F,
-	F#\=G,
-	D#\=H,
-	B#\=D,
-	K#\=E,
-	B#\=I, B#\=H, B#\=G, I#\=H, I#\=G, H#\=G,
-	A#\=G, A#\=E, G#\=E,
-	B#\=H, B#\=K, H#\=K,
-	A#\=B, A#\=C, A#\=H, B#\=C, B#\=H, C#\=H,
-	D#\=F, D#\=J, F#\=J,
-
-	E#<J,
-	D#<K, F#<K,	
 	labeling([ff],Vars).
 
 
@@ -173,6 +173,11 @@ latin_square(N,Square) :-
 
 
 %exo8
+blocks([], [], []).
+blocks([N1,N2,N3|Ns1], [N4,N5,N6|Ns2], [N7,N8,N9|Ns3]) :-
+        all_distinct([N1,N2,N3,N4,N5,N6,N7,N8,N9]),
+        blocks(Ns1, Ns2, Ns3).
+
 sudoku(Rows) :-
     length(Rows, 9), maplist(same_length(Rows), Rows),
     append(Rows, Vs), Vs ins 1..9,
@@ -184,12 +189,7 @@ sudoku(Rows) :-
     blocks(Ds, Es, Fs),
     blocks(Gs, Hs, Is).
 
-blocks([], [], []).
-blocks([N1,N2,N3|Ns1], [N4,N5,N6|Ns2], [N7,N8,N9|Ns3]) :-
-        all_distinct([N1,N2,N3,N4,N5,N6,N7,N8,N9]),
-        blocks(Ns1, Ns2, Ns3).
-
-problem(1, [[_,_,9,_,_,1,6,2,_],
+problemS(1, [[_,_,9,_,_,1,6,2,_],
             [5,7,_,_,2,8,_,3,_],
             [3,_,_,7,_,_,_,_,4],
             [8,9,_,_,7,_,4,_,_],
@@ -199,12 +199,49 @@ problem(1, [[_,_,9,_,_,1,6,2,_],
             [_,4,_,1,3,_,_,6,5],
             [_,2,7,6,_,_,9,_,_]]).
 
+displayline(L) :- printf('|%d %d %d|%d %d %d|%d %d %d|%n',L). 
+displayseperator :- printf('+-----+-----+-----+%n',[]).
 
-      
+solve(Rows):- problemS(1, Rows), sudoku(Rows),
+   maplist(labeling([ff]), Rows), maplist(writeln, Rows).
 
 
 
+%exo9
+%problem(1,[A1,A2,A3,A5,B1,B2,B3,B4,B5,C1,C2,C3,C4,C5,D2,D3,D4,D5,E1,E2,E3,E5]).
 
+nombre_croiss(P):-
+      P = [A1,A2,A3,A5,B1,B2,B3,B4,B5,C1,C2,C3,C4,C5,D2,D3,D4,D5,E1,E2,E3,E5],
+      P ins 0..9,
+      A1*A2*A3 #= 3,
+      B1+B2+B3+B4+B5 #= 12,
+      C1*10000+C2*1000+C3*100+C4*10+C5 #= (B4*100+C4*10+D4)*(B4*100+C4*10+D4),
+
+      square(D2*1000+D3*100+D4*10+D5),
+      E1*E2*E3 #= 18,
+      A1*B1*C1 #= 2,
+      A2 #= E2,B2 #= D2,
+      A3*10000+B3*1000+C3*100+D3*10+E3 #= (E1*100+E2*10+E3)*(E1*100+E2*10+E3),
+      B4*C4*D4 #= 12,
+      div(E1*100+E2*10+E3,A5+B5+C5+D5+E5)*(A5+B5+C5+D5+E5) #= E1*100+E2*10+E3,
+      N1 is A5+B5+C5+D5+E5,
+      isPrime(N1),
+
+      A1 #\= 0,A2 #\= 0,A3 #\= 0,A5 #\= 0,B1 #\= 0,C1 #\= 0,E1 #\= 0,
+      labeling([ff],P).
+
+
+
+divisible(X,Y) :- 0 is X mod Y, !.
+divisible(X,Y) :- X > Y+1, divisible(X, Y+1).
+
+isPrime(2) :- true,!.
+isPrime(X) :- X < 2,!,false.
+isPrime(X) :- not(divisible(X, 2)).
+
+square(Square):- N#>0, Square #= N*N.
+
+solove(P):- problem(1,P), nombre_croiss(P).
 
 
 
