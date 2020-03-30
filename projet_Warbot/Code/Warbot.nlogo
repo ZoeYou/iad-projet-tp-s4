@@ -211,11 +211,9 @@ to go
   ; réinitialise la capacité à créer des robots ou des murs pour les bases
   ask Bases [ set create-ok? true ]
   ; si plus de bases vertes ni bleues, victoire des rouges
-  if not any? Bases with [ color = green or color = blue ][ print "Victoire des rouges" set victoire 1 stop ]
+  if not any? Bases with [ color = green ][ print "Victoire des rouges" set victoire 1 stop ]
   ; si plus de bases rouges ni bleues, victoire des verts
-  if not any? Bases with [ color = red or color = blue ][ print "Victoire des verts" set victoire 2 stop ]
-  ; si plus de bases rouges ni vertes, victoire des bleus
-  if not any? Bases with [ color = red or color = green ][ print "Victoire des bleus" set victoire 3 stop ]
+  if not any? Bases with [ color = red ][ print "Victoire des verts" set victoire 2 stop ]
 
   ; pour tous les explorers
   ask Explorers [
@@ -1351,7 +1349,6 @@ false
 PENS
 "default" 1.0 0 -2674135 true "" "plot energy_red"
 "pen-1" 1.0 0 -13840069 true "" "plot energy_green"
-"pen-2" 1.0 0 -13345367 true "" "plot energy_blue"
 
 MONITOR
 101
@@ -1890,7 +1887,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.0.4
+NetLogo 6.1.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
