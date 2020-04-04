@@ -128,7 +128,7 @@ end
 ;; essaye de sélectionner une cible à viser
 ;;
 to green-team-select-target
-  ;; si le robot n'a pas une base adverse comme cible
+  ;; si le robot n'a pas une ennemie comme cible
   if (green-team-no-target?)
   [
     ;; il essaye de percevoir un robot ennemi (le plus proche de lui)
@@ -162,7 +162,7 @@ to green-team-drive-harvesters
 end
 
 to goGreenExplorer
-;  ifelse (carrying-food? > 1000) or (energy < 500) or ((Breed = RocketLaunchers) and (nb-missiles = 0))
+;  ifelse (carrying-food? > 1000) or (energy < 1000) or ((Breed = RocketLaunchers) and (nb-missiles = 0))
   ifelse (energy < 1000)
   [ green-team-go-back-to-base ]
   [ green-team-go-and-eat ]

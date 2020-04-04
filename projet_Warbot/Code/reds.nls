@@ -1,70 +1,116 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; le code de l'equipe rouge basique
-;; préfixe : red-team
+;; préfixe : swimming
 ;;
+;; mem0 et mem1 : coordonnees d'une cible
+;; mem2 : espace de la cible
+;; mem3 : indique si le robot est un robot qui travaille loins de sa base
+;; mem4 : indique si un harvester est en mode retour à la base
+;; mem5 : indique si le robot a ou non une cible sélectionnée
+
+;; mem6 : le nb de harvesters à créer
+;; mem7 : le nb de rocket-launchers à créer
+;; mem8 : le nb d'explorers à créer
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-to red-team-ask-for-energy [ b n ]
-  ask b [ if (energy > 6000) [ give-energy myself n ]]
+to swimming-ask-for-energy [ b n ]
+  ask b [ if (energy > 2000) [ give-energy myself n ]]
 end
 
-to red-team-go-back-to-base
-  if (carrying-food? > 1000) or (energy < 500) or ((Breed = RocketLaunchers) and (nb-missiles = 0))
-  [
-    let b min-one-of my-bases [ distance myself ]
-    if (b != nobody) [
-      ifelse (distance b <= 2)
-      [ 
-        if (carrying-food? > 1000) [ give-food b carrying-food? ]
-        if (energy < 500) [ red-team-ask-for-energy b 500 ]
-        if ((Breed = RocketLaunchers) and (nb-missiles = 0)) [
-          red-team-ask-for-energy b 500
-          new-missile 5
+to swimming-go-back-to-base
+  let b min-one-of my-bases [ distance myself ]
+  if (b != nobody ) [
+    if ((breed = Harvesters) and (distance b > 12) and (distance b < 13)) [drop-wall]
+
+    ifelse (distance b <= 2)
+      [
+        give-food b carrying-food? 
+
+        if ((Breed = Explorers) and (energy < 500)) [ swimming-ask-for-energy b 800 ]
+        if ((Breed = RocketLaunchers) and (energy < 800)) [ swimming-ask-for-energy b 1200 ]
+        if ((Breed = Harvesters) and (energy < 400)) [ swimming-ask-for-energy b 700 ]
+
+        if ((Breed = RocketLaunchers) and (nb-missiles < 3)) [
+            swimming-ask-for-energy b 500
+            new-missile 5
         ]
+      set mem4 0
+      ;; fait demi-tour
+      rt 180
       ]
+
+      ; sinon
       [
         set heading towards b - 20 + random 40
+
+        ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
+        
         if count turtles in-cone 2 90 with [ (breed != Burgers) and (breed != Perceptions) ] != 1 [ rt random 90 ]
         forward-move speed
       ]
-    ]    
-  ]
+    ]  
 end
 
-to red-team-go-and-eat
+to swimming-go-and-eat
   if ((breed = RocketLaunchers and (mem5 = 0)) or (breed = Explorers)) [
     random-move
   ]
 end
 
-to red-team-harvesters-go-and-eat
-  let b min-one-of perceive-food [ distance self ]
-  ifelse (b != nobody) [ 
-    ifelse (distance b) <= 2
-      [ take-food b ]
-      [ set heading towards b - 20 + random 40
-        if count turtles in-cone 2 90 with [ (breed != Burgers) and (breed != Perceptions) ] != 1 [ rt random 90 ]
-        forward-move speed
+to swimming-harvesters-go-and-eat
+  let w min-one-of (perceive-walls) [ distance myself ]
+  let b min-one-of my-bases [ distance myself ]
+  if ((w != nobody) and ((distance b < 12) or (distance b > 13))) [ take-wall w ]
+  let f min-one-of perceive-food [ distance myself ]
+  ifelse (f != nobody) [ 
+    ifelse (distance f) <= 2
+      [ take-food f ]
+      [ set heading towards f 
+      ifelse (free-ahead? speed = nobody) [ forward-move speed ][ rt random 360 if (free-ahead? speed = nobody) [ forward-move speed ]]
       ]
   ]
-  [ random-move ]
+  [
+    ifelse (mem5 = 1)
+    [ 
+      ifelse (distancexy mem0 mem1 > 2)
+      [
+        set heading towardsxy mem0 mem1
+        ifelse (free-ahead? speed = nobody) [ forward-move speed ][ rt random 360 if (free-ahead? speed = nobody) [ forward-move speed ]]
+      ]
+      [ set mem5 0 ]
+    ]
+    [ random-move ]
+  ]
 end
 
-to-report red-team-no-target?
+to-report swimming-no-target?
   report mem5 = 0
 end
 
-to red-team-set-target [ x y espece ]
+to swimming-set-target [ x y espece ]
   set mem0 x set mem1 y set mem2 espece set mem5 1
 end
 
-to red-team-call-rocket-launcher [ x y espece ]
-  let rl min-one-of perceive-specific-robots color RocketLaunchers [ distancexy x y ]
-  if (rl != nobody) [ ask rl [ red-team-set-target x y espece ]]
+to swimming-set-target-t [ t espece ]
+  set mem0 t set mem2 espece set mem5 2
 end
 
-to red-team-call-explorer [ x y espece ]
+to swimming-set-food-target [ x y ]
+  if (swimming-no-target?) [ set mem0 x set mem1 y set mem5 1 ] 
+end
+
+to swimming-call-rocket-launcher-xy [ x y espece ]
+  let rl min-one-of perceive-specific-robots color RocketLaunchers [ distancexy x y ]
+  if (rl != nobody) [ ask rl [ swimming-set-target x y espece ]]
+end
+
+to swimming-call-rocket-launcher-t [ t espece ]
+  let rl min-one-of perceive-specific-robots color RocketLaunchers [ distance t ]
+  if (rl != nobody) [ ask rl [ swimming-set-target-t t espece ]]
+end
+
+to swimming-call-explorer [ x y espece ]
   let ex one-of perceive-specific-robots color Explorers
   if (ex != nobody) [
     ask ex [
@@ -76,8 +122,13 @@ to red-team-call-explorer [ x y espece ]
   ]
 end
 
-to red-team-select-target
-  if (red-team-no-target?)
+to swimming-call-harvester [ x y ]
+  let h min-one-of perceive-specific-robots color harvesters [ distancexy x y ]
+  if (h != nobody) [ ask h [ swimming-set-food-target x y ]]
+end
+
+to swimming-select-target
+  if (swimming-no-target?)
   [
     let h min-one-of perceive-robots ennemy [ distance myself ]
     ifelse ( h != nobody ) [
@@ -90,54 +141,106 @@ to red-team-select-target
   ]
 end
 
-to red-team-shoot 
-  if (not red-team-no-target?) 
+to swimming-shoot 
+  if (not swimming-no-target?) 
   [
-    ifelse (distancexy mem0 mem1 < detection-range)
-    [ launch-rocket towardsxy mem0 mem1 set mem5 0]
-    [ set heading towardsxy mem0 mem1 - 20 + random 40
-      if count turtles in-cone 2 90 with [ (breed != Burgers) and (breed != Perceptions) ] != 1 [ rt random 90 ]
-      forward-move speed
-    ]
+    ifelse (mem5 = 1)
+    [ launch-rocket towardsxy mem0 mem1 set mem5 0 ]
+    [ launch-faf mem0 set mem5 0 ]
   ]
-  
+
+end
+
+to swimming-drive-harvesters
+  let food one-of perceive-food
+  if (food != nobody) [
+    swimming-call-harvester [xcor] of food [ycor] of food 
+  ]
+end
+
+to swimming-drive-base-shooter
+  let b min-one-of perceive-base ennemy [ distance myself ]
+  if (b != nobody) [
+    swimming-call-rocket-launcher-t b Bases
+  ]
 end
 
 to goRedExplorer
-  red-team-go-back-to-base
-  red-team-go-and-eat
+  ifelse (carrying-food? > 500) or (energy < 500)
+  [ swimming-go-back-to-base ]
+  [ swimming-go-and-eat ]
 
-  ifelse (not red-team-no-target?) [
-    red-team-call-rocket-launcher mem0 mem1 mem2
-    red-team-call-explorer mem0 mem1 mem2
+  swimming-drive-harvesters
+  swimming-drive-base-shooter
+
+  ifelse (not swimming-no-target?) [
+    swimming-call-rocket-launcher-xy mem0 mem1 mem2
   ]
   [ let h one-of perceive-robots ennemy
-    if ( h != nobody ) [ red-team-call-rocket-launcher [xcor] of h [ycor] of h [breed] of h]
+    if ( h != nobody ) [ swimming-call-rocket-launcher-t h [breed] of h]
   ]
 end
 
 to goRedRocketLauncher
-  red-team-go-back-to-base
-  red-team-select-target
-  red-team-shoot
-  red-team-go-and-eat
+  swimming-shoot
+  ifelse (carrying-food? > 500) or (energy < 800) or (nb-missiles < 3)
+  [ swimming-go-back-to-base ]
+  [ 
+    swimming-select-target
+    ifelse (swimming-no-target?) 
+    [ swimming-go-and-eat ]
+    [ swimming-shoot ]
+  ]
 
-  if ((energy > 3000) and (nb-missiles < 5)) [ new-missile 1 ]
+  if ((energy > 1200) and (nb-missiles < 5)) [ new-missile 5 ]
+  if ((energy > 1200) and (nb-fafs < 3)) [ new-faf 3 ]
 end
 
 to goRedHarvester
-  ;; rentre à la base si certaines conditions sont vérifiées
-  red-team-go-back-to-base
-  ;; cherche à manger
-  red-team-harvesters-go-and-eat
+  let f min-one-of perceive-food [ distance myself ]
+  while [(f != nobody) and (distance f <= 2)] [
+    take-food f
+    set f min-one-of perceive-food [ distance myself ]
+  ]
+
+  let ex min-one-of  perceive-specific-robots friend Explorers  [distance myself]
+  if ( ex != nobody) [ give-food ex carrying-food? ]
+
+  ifelse (mem4 = 1) or (carrying-food? > 500) or (energy < 400)
+  [
+    ; retour à la base
+    set mem4 1
+    ;; rentre à la base si certaines conditions sont vérifiées
+    swimming-go-back-to-base
+    if (energy > 100) and (carrying-food? > 100) [ 
+      ;; détermine la distance de la base la plus proche
+      let b min-one-of my-bases [ distance myself ]
+      if (b != nobody) [
+        ;; si le robot est à moins de 10 de la base
+        if (distance b < 12)
+          [ plant-seeds color max-seeds ]
+      ]
+    ]
+  ]
+  [
+    ;; cherche à manger
+    swimming-harvesters-go-and-eat
+  ]
 end
 
 to goRedBase
-  set label energy
-  if (energy > 12000) [ new-RocketLauncher self ]
-  let t one-of perceive-specific-robots ennemy rocketlaunchers
+  ifelse (mem6 > 0) [ new-Harvester self set mem6 mem6 - 1 ]
+  [ ifelse (mem7 > 0) [ new-RocketLauncher self set mem7 mem7 - 1 ]
+  [ if (mem8 > 0) [ new-Explorer self set mem8 mem8 - 1 ]]]
+
+  if (nb-missiles < 10) and (energy > 1000) [ new-missile 50 ]
+  if (nb-fafs < 10) and (energy > 1000) [ new-faf 10 ]
+  if (energy > 12000) [ ifelse (random 2 = 0) [ set mem6 mem6 + 1 ][ifelse (random 2 = 0) [ set mem8 mem8 + 1 ][ set mem7 mem7 + 1 ]]]
+
+  let t one-of perceive-robots ennemy
   if (t != nobody) [
-    launch-rocket towards t
+    ;; regarde s'il y a des robots amis en direction de la cible potentielle t avant de tirer
+    if (not any? perceive-robots-in-cone color towards t) [ launch-faf t ]
   ]
 end
 
@@ -155,4 +258,6 @@ end
 
 ;; procedure pour initialiser les bases rouges
 to initRedBase
+  new-Harvester self
+  set mem6 8 
 end
