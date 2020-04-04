@@ -5,7 +5,7 @@
 ;;
 ;; mem0 et mem1 : coordonnees d'une cible
 ;; mem2 : espace de la cible
-;; mem3 : indique si le robot est un robot qui travaille loins de sa base
+
 ;; mem4 : indique si un harvester est en mode retour à la base
 ;; mem5 : indique si le robot a ou non une cible sélectionnée
 
@@ -29,7 +29,7 @@ to swimming-go-back-to-base
 
         if ((Breed = Explorers) and (energy < 500)) [ swimming-ask-for-energy b 800 ]
         if ((Breed = RocketLaunchers) and (energy < 800)) [ swimming-ask-for-energy b 1200 ]
-        if ((Breed = Harvesters) and (energy < 400)) [ swimming-ask-for-energy b 700 ]
+        if ((Breed = Harvesters) and (energy < 400)) [ swimming-ask-for-energy b 800 ]
 
         if ((Breed = RocketLaunchers) and (nb-missiles < 3)) [
             swimming-ask-for-energy b 500
@@ -165,6 +165,13 @@ to swimming-drive-base-shooter
   ]
 end
 
+to swimming-drive-havester-shooter
+  let b min-one-of perceive-specific-robots ennemy Harvesters [ distance myself ]
+  if (b != nobody ) [
+    swimming-call-rocket-launcher-xy [xcor] of b [ycor] of b Harvesters
+  ]
+end
+
 to goRedExplorer
   ifelse (carrying-food? > 500) or (energy < 500)
   [ swimming-go-back-to-base ]
@@ -172,6 +179,7 @@ to goRedExplorer
 
   swimming-drive-harvesters
   swimming-drive-base-shooter
+  swimming-drive-havester-shooter
 
   ifelse (not swimming-no-target?) [
     swimming-call-rocket-launcher-xy mem0 mem1 mem2
@@ -204,7 +212,10 @@ to goRedHarvester
   ]
 
   let ex min-one-of  perceive-specific-robots friend Explorers  [distance myself]
-  if ( ex != nobody) [ give-food ex carrying-food? ]
+  if (ex != nobody) [ give-food ex carrying-food? ]
+  
+  let h_ad min-one-of perceive-specific-robots ennemy Harvesters [distance myself]
+  if (h_ad != nobody) [ swimming-call-rocket-launcher-t h_ad [breed] of h_ad]
 
   ifelse (mem4 = 1) or (carrying-food? > 500) or (energy < 400)
   [
@@ -233,9 +244,9 @@ to goRedBase
   [ ifelse (mem7 > 0) [ new-RocketLauncher self set mem7 mem7 - 1 ]
   [ if (mem8 > 0) [ new-Explorer self set mem8 mem8 - 1 ]]]
 
-  if (nb-missiles < 10) and (energy > 1000) [ new-missile 50 ]
+  if (nb-missiles < 10) and (energy > 1000) [ new-missile 30 ]
   if (nb-fafs < 10) and (energy > 1000) [ new-faf 10 ]
-  if (energy > 12000) [ ifelse (random 2 = 0) [ set mem6 mem6 + 1 ][ifelse (random 2 = 0) [ set mem8 mem8 + 1 ][ set mem7 mem7 + 1 ]]]
+  if (energy > 10000) [ ifelse (random 2 = 0) [ set mem6 mem6 + 1 ][ifelse (random 3 = 0) [ set mem8 mem8 + 1 ][ set mem7 mem7 + 1 ]]]
 
   let t one-of perceive-robots ennemy
   if (t != nobody) [
@@ -259,5 +270,7 @@ end
 ;; procedure pour initialiser les bases rouges
 to initRedBase
   new-Harvester self
-  set mem6 8 
+  set mem6 20 
+  set mem7 4
+  set mem8 4
 end
