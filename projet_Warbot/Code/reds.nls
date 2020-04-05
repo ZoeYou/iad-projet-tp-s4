@@ -15,7 +15,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 to swimming-ask-for-energy [ b n ]
-  ask b [ if (energy > 2000) [ give-energy myself n ]]
+  ask b [ if (energy > 2500) [ give-energy myself n ]]
 end
 
 to swimming-go-back-to-base
@@ -33,7 +33,7 @@ to swimming-go-back-to-base
 
         if ((Breed = RocketLaunchers) and (nb-missiles < 3)) [
             swimming-ask-for-energy b 500
-            new-missile 5
+            new-missile 50
         ]
       set mem4 0
       ;; fait demi-tour
@@ -165,7 +165,7 @@ to swimming-drive-base-shooter
   ]
 end
 
-to swimming-drive-havester-shooter
+to swimming-drive-harvester-shooter
   let b min-one-of perceive-specific-robots ennemy Harvesters [ distance myself ]
   if (b != nobody ) [
     swimming-call-rocket-launcher-xy [xcor] of b [ycor] of b Harvesters
@@ -179,7 +179,7 @@ to goRedExplorer
 
   swimming-drive-harvesters
   swimming-drive-base-shooter
-  swimming-drive-havester-shooter
+  swimming-drive-harvester-shooter
 
   ifelse (not swimming-no-target?) [
     swimming-call-rocket-launcher-xy mem0 mem1 mem2
@@ -190,8 +190,9 @@ to goRedExplorer
 end
 
 to goRedRocketLauncher
-  swimming-shoot
-  ifelse (carrying-food? > 500) or (energy < 800) or (nb-missiles < 3)
+  if(not swimming-no-target?) [ swimming-shoot ]
+  
+  ifelse (carrying-food? > 500) or (energy < 800) or (nb-missiles = 0)
   [ swimming-go-back-to-base ]
   [ 
     swimming-select-target
@@ -200,8 +201,8 @@ to goRedRocketLauncher
     [ swimming-shoot ]
   ]
 
-  if ((energy > 1200) and (nb-missiles < 5)) [ new-missile 5 ]
-  if ((energy > 1200) and (nb-fafs < 3)) [ new-faf 3 ]
+  if ((energy > 1200) and (nb-missiles < 5)) [ new-missile 10 ]
+  if ((energy > 1200) and (nb-fafs < 3)) [ new-faf 5 ]
 end
 
 to goRedHarvester
